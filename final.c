@@ -39,11 +39,21 @@ void *gas();
 
 void *gas(){
 
+    do{
+        sem_wait(&sem_pump);
+
+        if(T > 0){
+    
+    
+    
+        }   
+    
+    }while(!finish);
 }
 
 void *carP(){
     int i;
-    double time = 0;
+    int time = 0;
     int carNum = N;
     car *cars; 
     cars =(car *)malloc(N);
@@ -61,12 +71,11 @@ void *carP(){
             pthread_mutex_unlock(&mutex);
         }
         else{
-        sem_wait(&sem_arrive);
         bool find = false;
         for(i = 0; i < carNum; i++){
             if(cars[i].available && !find && cars[i].rideCount < max_ride){
+                sem_wait(&sem_arrive);
                 printf("Car %d is available for ride!\n", i+1);
-                sem_post(&sem_car);
                 cars[i].rideCount = cars[i].rideCount + 1;
                 cars[i].available = false;
                 cars[i].rideTime = time;
@@ -76,9 +85,10 @@ void *carP(){
 
                 pthread_mutex_unlock(&mutex);
                 find = true;
+                sem_post(&sem_car);
             }
             else if(!cars[i].available && (time == cars[i].rideTime + K) ){
-                printf("Time is %f, ridetime is %d, k is %d\n", time,cars[i].rideTime,K);
+                printf("Time is %d, ridetime is %d, k is %d\n", time,cars[i].rideTime,K);
                 printf("Car %d finish its task!, it is available now!\n",i+1);
                 cars[i].available = true;
                 
@@ -86,7 +96,10 @@ void *carP(){
                 N = N + 1;
                 pthread_mutex_unlock(&mutex);
             }
-
+            else if(!cars[i].rideCount>= max_ride){
+                sem_post(&sem_pump);
+            
+            }
         }
         if(!find){
             printf("No car available now!");
@@ -114,10 +127,10 @@ void *vistor(){
         else{
         
         printf("Customer %d 's turn! \n", (vNum - M + 1));
-        sem_post(&sem_arrive);
         //wait for car
-        sleep(1);
+        sem_post(&sem_arrive);
         sem_wait(&sem_car);
+        sleep(1);
         printf("WOw customer %d get in to car!\n",(vNum - M + 1));
         
         pthread_mutex_lock(&mutex);
